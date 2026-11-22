@@ -34,13 +34,21 @@ If you have more than one exam, a **Study as one** tab merges them into shared t
 
 ## Install (2 minutes)
 
-You need: **Node 18+**, **Python 3**, and **[Claude Code](https://claude.com/claude-code) or [Codex](https://github.com/openai/codex)** signed in.
+You need: **Node 18+**, **Python 3**, **Git**, and **[Claude Code](https://claude.com/claude-code) or [Codex](https://github.com/openai/codex)** signed in.
 
+**Mac / Linux** (Terminal):
 ```sh
 git clone https://github.com/matthewlee13917-coder/exam-cram.git ~/exam-cram
-cd ~/exam-cram && ./install.sh
+cd ~/exam-cram && node install.js
 examcram
 ```
+
+**Windows** (PowerShell):
+```powershell
+git clone https://github.com/matthewlee13917-coder/exam-cram.git $HOME\exam-cram
+cd $HOME\exam-cram; node install.js
+```
+Then open a **new** PowerShell window and run `examcram`. When installing Python, tick "Add python.exe to PATH". If PowerShell blocks scripts, run `examcram.cmd` instead.
 
 Optional, for the course-site route: `npm install -g @playwright/cli@latest`
 
@@ -67,7 +75,7 @@ skill/references/       gather · question-bank · page-spec · verify
 skill/template/         the study page UI (template.html, app.js, build.py) + a working example
 skill/tools/            bank_tools.py (validate/export questions) · yt_verify.py (check video links)
 docs/demo/              recorded demo of the launcher + the example study page
-install.sh
+install.js              installer (Mac, Linux, Windows); install.sh calls it
 ```
 
 Without the launcher, you can point any agent at it directly: *"Read ~/exam-cram/skill/SKILL.md and follow it to build my exam cram page."*

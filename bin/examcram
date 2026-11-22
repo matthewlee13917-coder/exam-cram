@@ -27,7 +27,11 @@ const violet = s => c('38;5;141', s), green = s => c('38;5;114', s), dim = s => 
 const out = s => process.stdout.write(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const clear = () => out('\x1b[H\x1b[2J');
-const has = cmd => spawnSync('sh', ['-c', `command -v ${cmd}`], { stdio: 'ignore' }).status === 0;
+const WIN = process.platform === 'win32';
+const has = cmd => spawnSync(WIN ? 'where' : 'sh', WIN ? [cmd] : ['-c', `command -v ${cmd}`], { stdio: 'ignore' }).status === 0;
+// Windows: npm installs agents as .cmd shims, which Node can only start through the shell
+const which = cmd => { if (!WIN) return cmd; const r = spawnSync('where', [cmd], { encoding: 'utf8' }); return (r.stdout || '').split(/\r?\n/).filter(Boolean).filter(p => /\.(exe|cmd|bat)$/i.test(p)).sort((a, b) => /\.exe$/i.test(b) - /\.exe$/i.test(a))[0] || cmd; };
+const PY = ['python3', 'python', 'py'].find(c => spawnSync(c, c === 'py' ? ['-3', '--version'] : ['--version'], { stdio: 'ignore', shell: WIN }).status === 0) || null;
 const restore = () => { if (TTY) out('\x1b[?25h\x1b[0m'); };
 process.on('exit', restore); process.on('SIGINT', () => { restore(); console.log(); process.exit(130); });
 
@@ -120,24 +124,24 @@ const ask = (q, def) => new Promise(res => {
 function detectPlaywright() {
   if (process.env.EXAMCRAM_TEST_NO_PW === '1') return null; // test hook
   if (has('playwright-cli')) return 'playwright-cli';
-  if (spawnSync('python3', ['-c', 'import playwright'], { stdio: 'ignore' }).status === 0) return 'python playwright';
+  if (PY && spawnSync(PY, (PY === 'py' ? ['-3'] : []).concat(['-c', 'import playwright']), { stdio: 'ignore', shell: WIN }).status === 0) return 'python playwright';
   try { require.resolve('playwright', { paths: [process.cwd(), ROOT] }); return 'node playwright'; } catch {}
   return null;
 }
-const ver = (cmd, a = ['--version']) => { const r = spawnSync(cmd, a, { encoding: 'utf8' }); return r.status === 0 ? (r.stdout || r.stderr).trim().split('\n')[0].replace(/^[^0-9]*/, '').split(' ')[0] : null; };
+const ver = (cmd, a = ['--version']) => { const r = spawnSync(cmd, a, { encoding: 'utf8', shell: WIN }); return r.status === 0 ? (r.stdout || r.stderr).trim().split('\n')[0].replace(/^[^0-9]*/, '').split(' ')[0] : null; };
 const ok = s => green('✓ ') + s, no = s => amber('✗ ') + s, row = (k, v) => console.log('  ' + k.padEnd(14) + v);
 
 // ---------- setup check ----------
 function preflight() {
   console.log('\n' + bold('Checking your setup'));
-  const py = ver('python3'), cl = has('claude') && (ver('claude') || 'found'), cx = has('codex') && (ver('codex') || 'found'), pw = detectPlaywright();
+  const py = PY && ver(PY, PY === 'py' ? ['-3', '--version'] : ['--version']), cl = has('claude') && (ver('claude') || 'found'), cx = has('codex') && (ver('codex') || 'found'), pw = detectPlaywright();
   const skillIn = ['claude', 'codex'].filter(a => fs.existsSync(path.join(os.homedir(), '.' + a, 'skills', 'exam-cram')));
   row('Node', ok(process.versions.node));
-  row('Python 3', py ? ok(py) : no('missing: the question-bank tools need it (macOS: xcode-select --install)'));
+  row('Python 3', py ? ok(py) : no('missing: the question-bank tools need it (' + (WIN ? 'python.org, tick "Add python.exe to PATH"' : 'macOS: xcode-select --install') + ')'));
   row('Claude Code', cl ? ok(cl) : dim('not found'));
   row('Codex', cx ? ok(cx) : dim('not found'));
   row('Playwright', pw ? ok(pw) : dim('not installed (only needed to auto-pull from your course site)'));
-  row('Skill', skillIn.length ? ok('installed for ' + skillIn.join(' + ')) : amber('! not linked: run ./install.sh (the launcher still works)'));
+  row('Skill', skillIn.length ? ok('installed for ' + skillIn.join(' + ')) : amber('! not linked: run node install.js (the launcher still works)'));
   if (!cl && !cx) {
     console.log('\n' + amber('You need an AI agent to build the page.') + ' Install one, sign in, then run examcram again:');
     console.log('  Claude Code:  ' + bold('npm install -g @anthropic-ai/claude-code') + '  then  ' + bold('claude'));
@@ -220,6 +224,7 @@ async function main() {
 Created by examcram on ${today}. Follow the exam-cram skill: ${SKILL}
 
 - route: ${routeLine}
+- platform: ${process.platform}${WIN ? ' (Windows: run the Python tools with ' + (PY || 'python') + ' instead of python3; use PowerShell commands)' : ''}
 ${site ? `- course site: ${site}\n` : ''}${route === 'playwright' ? `- check school email for scope announcements: ${email ? 'yes' : 'no'}\n` : ''}- working folder: ${dir}
 - put raw files in: ${path.join(dir, 'sources')}
 
@@ -233,7 +238,8 @@ ${extra || '(none)'}
   console.log('\n' + green('✓') + ' wrote ' + path.join(dir, 'BRIEF.md'));
   if (route === 'upload') {
     console.log(amber('→ ') + `Put your slides, notes, syllabus, practice exams and any "what's on the exam" email in:\n   ${bold(path.join(dir, 'sources'))}`);
-    if (process.platform === 'darwin' && TTY && await yes('Open that folder in Finder now?', 'y')) spawnSync('open', [path.join(dir, 'sources')]);
+    const opener = process.platform === 'darwin' ? ['open', 'Finder'] : WIN ? ['explorer', 'File Explorer'] : null;
+    if (opener && TTY && await yes(`Open that folder in ${opener[1]} now?`, 'y')) spawnSync(opener[0], [path.join(dir, 'sources')]);
   }
 
   // ---------- hand off to the agent ----------
@@ -244,7 +250,10 @@ ${extra || '(none)'}
   console.log(`\n${violet('▶')} Starting ${bold(agent)} in ${dir}…` + dim(route === 'playwright' ? '\n  A browser window will open: log in yourself (the agent never sees your password), then tell the agent you\'re in.' : '') + '\n');
   if (RL) RL.close();
   if (flag('--dry-run')) { console.log(dim('[dry run] would run: ' + agent + ' "' + prompt.slice(0, 60) + '…"')); return; }
-  const child = spawn(agent, [prompt], { cwd: dir, stdio: 'inherit' });
+  const exe = which(agent);
+  const child = WIN && !/\.exe$/i.test(exe)
+    ? spawn(`"${exe}" "${prompt.replace(/"/g, "'")}"`, { cwd: dir, stdio: 'inherit', shell: true })
+    : spawn(exe, [prompt], { cwd: dir, stdio: 'inherit' });
   child.on('exit', code => process.exit(code ?? 0));
 }
 main().catch(e => { restore(); console.error(e); process.exit(1); });

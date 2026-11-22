@@ -19,6 +19,8 @@ Tools in `tools/` (Python 3, no dependencies): `bank_tools.py` (parse, check, ex
 
 **The page UI ships with this skill** in `template/` (`template.html`, `app.js`, `build.py`) with a full working demo in `template/example/`. Don't write a page from scratch and don't edit the template per course: you write three data files (`work/page/config.js`, `content.js`, `videos.js`) plus the bank, and `build.py` produces `site/index.html`. Every student gets the same tested interface.
 
+**On Windows** (BRIEF.md says `platform: win32`): run the Python tools with `python` or `py -3` instead of `python3`, use PowerShell commands, and don't assume `pdftotext`/`tesseract` exist (use Python libraries, or ask the student to install them).
+
 ## Hard rules
 
 1. **Practice only.** Never open, start, answer or submit graded work (quizzes, assignments, exams, graded LMS activities). If a source is a live graded item, skip it and tell the student.

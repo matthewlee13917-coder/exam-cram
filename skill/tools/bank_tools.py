@@ -5,7 +5,7 @@
   bank_tools.py export FILES... -o bank.json [--course-from-filename] [--balance]
   bank_tools.py blind  FILES... -o blind.json         questions without answers, for the checker
 """
-import json, os, re, sys, argparse, collections
+import json, os, re, sys, argparse, collections, glob
 
 def parse(path, course=None):
     items, cur, errs = [], None, []
@@ -86,7 +86,8 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument('cmd', choices=['check', 'export', 'blind'])
     ap.add_argument('files', nargs='+'); ap.add_argument('-o'); ap.add_argument('--course-from-filename', action='store_true')
     ap.add_argument('--balance', action='store_true'); a = ap.parse_args()
-    items, errs = load(a.files, True)   # course = file name (e.g. bank/ECON101.txt -> "ECON101")
+    files = [f for p in a.files for f in (sorted(glob.glob(p)) or [p])]   # Windows shells don't expand *.txt
+    items, errs = load(files, True)   # course = file name (e.g. bank/ECON101.txt -> "ECON101")
     errs += validate(items)
     if a.balance: balance(items)
     st = stats(items)
