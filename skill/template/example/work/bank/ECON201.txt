@@ -1,0 +1,65 @@
+# Demo bank. Fictional course; questions written for the demo, not from any real exam.
+@ E201-1 | 4 | Natural rate | clone | Demo slides Ch 4 | based: Ch 4 slide "Steady-state unemployment"
+Q: Each month 2% of employed workers lose their jobs and 23% of unemployed workers find one. What is the steady-state unemployment rate?
+- 2.0%
+- 8.0% *
+- 8.7%
+- 25.0%
+E: In steady state u = s / (s + f) = 0.02 / (0.02 + 0.23) = 0.02 / 0.25 = 8%.
+T: 0.02 / 0.23 = 8.7% forgets to add the separation rate to the bottom.
+
+@ E201-2 | 4 | Okun's law | clone | Demo slides Ch 4 | based: Ch 4 slide "Okun's law"
+Q: Okun's coefficient is 2. Unemployment is 2 points above its natural rate. By roughly how much is output below potential?
+- 1%
+- 2%
+- 4% *
+- 8%
+E: Output gap ≈ −2 × (u − u*) = −2 × 2 = −4%. Output is about 4% below potential.
+
+@ E201-3 | 4 | Hysteresis | clone | Demo slides Ch 4 | based: Ch 4 slide "Hysteresis"
+Q: After a long recession, the natural rate of unemployment stays higher than before. What is this called?
+- Hysteresis *
+- Stagflation
+- The sacrifice ratio
+- Crowding out
+E: Hysteresis: a long spell of high actual unemployment raises the natural rate itself, for example because skills decay.
+
+@ E201-4 | 5 | Costs of anticipated inflation | clone | Demo slides Ch 5 | based: Ch 5 slide "Costs even when inflation is expected"
+Q: Restaurants reprinting their menus every month because of steady, fully expected inflation is an example of:
+- Shoe-leather costs
+- Menu costs *
+- Redistribution from lenders to borrowers
+- The inflation tax
+E: Menu costs are the real resources spent changing posted prices. They exist even when inflation is anticipated.
+
+@ E201-5 | 5 | Taxing nominal interest | clone | Demo slides Ch 5 | based: Ch 5 slide "Taxing nominal interest"
+Q: The nominal rate is 8%, inflation is 5%, and interest income is taxed at 50%. What is the after-tax real return?
+- 3.0%
+- 1.5%
+- −1.0% *
+- −4.0%
+E: After-tax nominal return = 8% × (1 − 0.5) = 4%. Subtract inflation: 4% − 5% = −1%. The tax falls on the nominal rate, including the part that only compensates for inflation.
+
+@ E201-6 | 5 | Bond pricing | clone | Demo slides Ch 5 | based: Ch 5 slide "Bond prices and rates"
+Q: A zero-coupon bond pays $1,000 in one year. If the market interest rate is 5%, what is its price today?
+- $950.00
+- $952.38 *
+- $1,000.00
+- $1,050.00
+E: Price = 1,000 / 1.05 = $952.38. Present value divides by (1 + i); multiplying by 0.95 gives the wrong $950.
+
+@ E201-7 | 6 | Expectations-augmented Phillips curve | clone | Demo slides Ch 6 | based: Ch 6 slide "Adding expectations"
+Q: Expected inflation is 3%, the natural rate is 6% and β = 0.5 in π = πᵉ − β(u − u*). If unemployment is 4%, inflation is:
+- 2%
+- 3%
+- 4% *
+- 5%
+E: π = 3% − 0.5 × (4% − 6%) = 3% + 1% = 4%.
+
+@ E201-8 | 6 | Long-run Phillips curve | clone | Demo slides Ch 6 | based: Ch 6 slide "The long run"
+Q: In the long run, once expectations fully adjust, the Phillips curve is:
+- Downward-sloping, as in the short run
+- Vertical at the natural rate of unemployment *
+- Horizontal at expected inflation
+- Upward-sloping
+E: When πᵉ catches up with π, u returns to u* at any steady inflation rate, so the long-run curve is vertical there.

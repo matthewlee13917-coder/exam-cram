@@ -1,0 +1,250 @@
+#!/usr/bin/env node
+// examcram: intro animation, intake menu, then hand off to Claude Code or Codex.
+// Zero dependencies. Node 18+.
+'use strict';
+const fs = require('fs'), path = require('path'), os = require('os'), rl = require('readline');
+const { spawnSync, spawn } = require('child_process');
+
+const ROOT = path.resolve(fs.realpathSync(__filename), '..', '..');
+const SKILL = path.join(ROOT, 'skill', 'SKILL.md');
+const args = process.argv.slice(2);
+const flag = f => args.includes(f);
+if (flag('-h') || flag('--help')) {
+  console.log(`examcram: build a verified study page for your exams with your AI agent
+
+usage: examcram [--no-anim] [--demo] [--agent claude|codex] [--dir PATH] [--dry-run]
+  --no-anim   skip the intro animation
+  --demo      play the animation and exit
+  --agent     pick the agent instead of auto-detecting
+  --dir       working folder (default: ./exam-prep-YYYY-MM-DD)
+  --dry-run   do everything except start the agent`); process.exit(0);
+}
+
+// ---------- terminal helpers ----------
+const TTY = (process.stdout.isTTY || process.env.EXAMCRAM_FORCE_TTY === '1') && !process.env.NO_COLOR;
+const c = (code, s) => TTY ? `\x1b[${code}m${s}\x1b[0m` : s;
+const violet = s => c('38;5;141', s), green = s => c('38;5;114', s), dim = s => c('2', s), bold = s => c('1', s), amber = s => c('38;5;222', s);
+const out = s => process.stdout.write(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const clear = () => out('\x1b[H\x1b[2J');
+const has = cmd => spawnSync('sh', ['-c', `command -v ${cmd}`], { stdio: 'ignore' }).status === 0;
+const restore = () => { if (TTY) out('\x1b[?25h\x1b[0m'); };
+process.on('exit', restore); process.on('SIGINT', () => { restore(); console.log(); process.exit(130); });
+
+// ---------- animation: book opens -> pages stream 1s and 0s -> bits decode into notes ----------
+const W = 46, PAD = ' '.repeat(Math.max(0, Math.floor(((process.stdout.columns || 80) - W) / 2)));
+const BOOK = [
+[ '',
+  '               ______________',
+  '              /             /|',
+  '             /   E X A M   / |',
+  '            /_____________/  |',
+  '            |  ~~~~~~~~~  |  /',
+  '            |  ~~~~~~~~~  | /',
+  '            |_____________|/' ],
+[ '',
+  '',
+  '            ______ ______',
+  '           /      |      \\',
+  '          / ~~~~~ | ~~~~~ \\',
+  '         /  ~~~~~ | ~~~~~  \\',
+  '        /_________|_________\\' ],
+[ '',
+  '',
+  '     __________________ __________________',
+  '    |  ~~~~~~~~~~~~~~  |  ~~~~~~~~~~~~~~  |',
+  '    |  ~~~~~~~~~~~~~~  |  ~~~~~~~~~~~~~~  |',
+  '    |  ~~~~~~~~~~~~~~  |  ~~~~~~~~~~~~~~  |',
+  '    |__________________|__________________|' ]
+];
+const OPEN = BOOK[2];
+const NOTES = [
+  'EXAM CRAM  ·  your course files -> a study page',
+  '',
+  '  > scope       what is in, what is parked',
+  '  > cram sheet  formulas, traps, worked examples',
+  '  > practice    real past questions + checked clones',
+  '  > mock        timed, in the real exam format',
+  '  > videos      verified lessons per topic',
+];
+const bit = () => (Math.random() < .5 ? '0' : '1');
+
+async function intro() {
+  if (!TTY || flag('--no-anim')) return;
+  out('\x1b[?25l');
+  // 1. the book opens
+  for (const f of BOOK) { clear(); out('\n\n' + f.map(l => PAD + violet(l)).join('\n')); await sleep(380); }
+  // 2. pages turn into 1s and 0s, streaming upward out of the book
+  const cols = [];
+  for (let x = 6; x < 42; x++) if (x !== 23) cols.push(x);
+  const H = 9, field = Array.from({ length: H }, () => Array(W).fill(' '));
+  for (let t = 0; t < 26; t++) {
+    field.pop(); const row = Array(W).fill(' ');
+    for (const x of cols) if (Math.random() < 0.38 + t * 0.012) row[x] = bit();
+    field.unshift(row);
+    // pages flicker into bits too
+    const book = OPEN.map((l, i) => i < 3 ? l : l.replace(/~/g, () => Math.random() < t / 26 ? bit() : '~'));
+    clear();
+    out('\n' + field.slice().reverse().map(r => PAD + green(r.join(''))).join('\n') + '\n' + book.slice(2).map(l => PAD + violet(l)).join('\n'));
+    await sleep(55);
+  }
+  // 3. the bits settle into notes
+  const steps = 22;
+  for (let s = 0; s <= steps; s++) {
+    clear(); out('\n\n');
+    NOTES.forEach((line, li) => {
+      const done = Math.floor(line.length * Math.min(1, (s - li * 0.6) / (steps - 6)));
+      const shown = [...line].map((ch, i) => ch === ' ' ? ' ' : i < done ? ch : bit()).join('');
+      const settled = shown.slice(0, Math.max(0, done)), noise = shown.slice(Math.max(0, done));
+      out(PAD + (li === 0 ? bold(violet(settled)) : settled) + green(noise) + '\n');
+    });
+    await sleep(45);
+  }
+  out('\x1b[?25h');
+}
+
+// ---------- intake ----------
+let RL = null; const lines = [], waiters = [];
+function reader() {
+  if (RL) return;
+  RL = rl.createInterface({ input: process.stdin, terminal: false });
+  RL.on('line', l => waiters.length ? waiters.shift()(l) : lines.push(l));
+  RL.on('close', () => { while (waiters.length) waiters.shift()(''); RL.closed = true; });
+}
+const ask = (q, def) => new Promise(res => {
+  reader(); out(q + (def ? dim(` [${def}]`) : '') + ' ');
+  const done = a => { if (!TTY) out(a + '\n'); res(a.trim() || def || ''); };
+  if (lines.length) done(lines.shift()); else if (RL.closed) done(''); else waiters.push(done);
+});
+
+function detectPlaywright() {
+  if (process.env.EXAMCRAM_TEST_NO_PW === '1') return null; // test hook
+  if (has('playwright-cli')) return 'playwright-cli';
+  if (spawnSync('python3', ['-c', 'import playwright'], { stdio: 'ignore' }).status === 0) return 'python playwright';
+  try { require.resolve('playwright', { paths: [process.cwd(), ROOT] }); return 'node playwright'; } catch {}
+  return null;
+}
+const ver = (cmd, a = ['--version']) => { const r = spawnSync(cmd, a, { encoding: 'utf8' }); return r.status === 0 ? (r.stdout || r.stderr).trim().split('\n')[0].replace(/^[^0-9]*/, '').split(' ')[0] : null; };
+const ok = s => green('✓ ') + s, no = s => amber('✗ ') + s, row = (k, v) => console.log('  ' + k.padEnd(14) + v);
+
+// ---------- setup check ----------
+function preflight() {
+  console.log('\n' + bold('Checking your setup'));
+  const py = ver('python3'), cl = has('claude') && (ver('claude') || 'found'), cx = has('codex') && (ver('codex') || 'found'), pw = detectPlaywright();
+  const skillIn = ['claude', 'codex'].filter(a => fs.existsSync(path.join(os.homedir(), '.' + a, 'skills', 'exam-cram')));
+  row('Node', ok(process.versions.node));
+  row('Python 3', py ? ok(py) : no('missing: the question-bank tools need it (macOS: xcode-select --install)'));
+  row('Claude Code', cl ? ok(cl) : dim('not found'));
+  row('Codex', cx ? ok(cx) : dim('not found'));
+  row('Playwright', pw ? ok(pw) : dim('not installed (only needed to auto-pull from your course site)'));
+  row('Skill', skillIn.length ? ok('installed for ' + skillIn.join(' + ')) : amber('! not linked: run ./install.sh (the launcher still works)'));
+  if (!cl && !cx) {
+    console.log('\n' + amber('You need an AI agent to build the page.') + ' Install one, sign in, then run examcram again:');
+    console.log('  Claude Code:  ' + bold('npm install -g @anthropic-ai/claude-code') + '  then  ' + bold('claude'));
+    console.log('  Codex:        ' + bold('npm install -g @openai/codex') + '  then  ' + bold('codex'));
+    process.exit(1);
+  }
+  return { pw, agents: [cl && 'claude', cx && 'codex'].filter(Boolean) };
+}
+
+const LMS = { '1': ['Brightspace (D2L)', 'e.g. https://yourschool.brightspace.com'], '2': ['Canvas', 'e.g. https://yourschool.instructure.com'], '3': ['Moodle', 'e.g. https://moodle.yourschool.edu'], '4': ['Blackboard', 'e.g. https://learn.yourschool.edu'], '5': ['Other', ''] };
+async function menu(title, opts, def) {
+  console.log('\n' + bold(title)); opts.forEach(([k, a, b]) => console.log(`  ${violet(k)}  ${a}${b ? dim('  ' + b) : ''}`));
+  for (let tries = 0; ; tries++) {
+    const a = await ask('Choose', def);
+    if (opts.some(([k]) => k === a)) return a;
+    if (RL && RL.closed && !lines.length || tries > 4) return def;
+    console.log(amber(`  Type ${opts.map(([k]) => k).join(', ').replace(/, (\w+)$/, ' or $1')}.`));
+  }
+}
+const yes = async (q, def = 'y') => /^y/i.test(await ask(q + dim(def === 'y' ? ' (Y/n)' : ' (y/N)'), def));
+
+async function main() {
+  await intro();
+  if (flag('--demo')) { console.log(); return; }
+  if (!TTY || flag('--no-anim')) NOTES.forEach((l, i) => console.log(i === 0 ? bold(l) : l));
+  const env = preflight();
+  let pw = env.pw;
+
+  // Q1: where does the material come from?
+  const pick = await menu('How should your agent get your course material?', [
+    ['1', 'Auto-pull from your course site', 'you log in, your agent downloads the files'],
+    ['2', 'Manual upload', 'you drop files into a folder'],
+    ['3', 'No files', 'just the course, textbook and topics'],
+  ], '1');
+  let route = { '1': 'playwright', '2': 'upload', '3': 'notes' }[pick] || 'upload';
+  let lms = '', site = '', email = false;
+
+  if (route === 'playwright') {
+    // Q2: which site
+    const l = await menu('Which course site does your school use?', Object.entries(LMS).map(([k, [n]]) => [k, n]), '1');
+    lms = (LMS[l] || LMS['5'])[0];
+    if (lms === 'Other') lms = await ask('Name of the site', 'my school\'s course site');
+    site = await ask(`${lms} address ${dim((LMS[l] || [])[1] || '')}${dim(' (blank: the agent will ask)')}`, '');
+    email = await yes('Should it also check your school email for the professor\'s scope announcement?', 'y');
+    // Q3: Playwright check
+    if (pw) console.log(green('✓') + ` Playwright found (${pw}). Your agent will open a visible browser for you to log in.`);
+    else {
+      const how = await menu('Auto-pull needs Playwright, which isn\'t installed. What do you want to do?', [
+        ['1', 'Install it now', 'npm install -g @playwright/cli@latest'],
+        ['2', 'Let my agent install it when it starts'],
+        ['3', 'Switch to manual upload instead'],
+      ], '1');
+      if (how === '1') {
+        console.log(dim('\n$ npm install -g @playwright/cli@latest'));
+        if (RL) { RL.close(); RL = null; }
+        const r = spawnSync('npm', ['install', '-g', '@playwright/cli@latest'], { stdio: 'inherit' });
+        pw = detectPlaywright();
+        if (r.status === 0 && pw) console.log(green('✓') + ' Playwright installed.');
+        else { console.log(amber('Install failed') + ' (try it yourself later). Switching to manual upload.'); route = 'upload'; }
+      } else if (how === '3') route = 'upload';
+    }
+  }
+
+  console.log('\n' + bold('Your exams') + dim('  (one per line, blank line to finish)'));
+  console.log(dim('  e.g.  ECON 101 midterm 2 · Tue Nov 24 2:30pm · 50 MCQ, 80 min · ch 8–11'));
+  const exams = [];
+  for (;;) { const e = await ask(violet('  exam ' + (exams.length + 1) + ':')); if (!e) break; exams.push(e); }
+  if (!exams.length) exams.push('(not given: ask me)');
+  const extra = await ask('Anything else the agent should know? (professor, textbook, what you find hard)', '');
+
+  const today = new Date().toISOString().slice(0, 10);
+  const argDir = args.includes('--dir') ? args[args.indexOf('--dir') + 1] : null;
+  const dir = path.resolve(argDir || await ask('Working folder', `./exam-prep-${today}`));
+  for (const d of ['sources', 'work/src', 'work/bank', 'work/page', 'site']) fs.mkdirSync(path.join(dir, d), { recursive: true });
+
+  const routeLine = route === 'playwright' ? `playwright: auto-pull from ${lms} (${pw ? 'detected: ' + pw : 'not installed yet: install it first, or fall back to upload'})`
+    : route === 'upload' ? 'upload: the student puts files in sources/' : 'notes: no files, build from the course, textbook and topics the student gives';
+  const brief = `# Exam prep brief
+
+Created by examcram on ${today}. Follow the exam-cram skill: ${SKILL}
+
+- route: ${routeLine}
+${site ? `- course site: ${site}\n` : ''}${route === 'playwright' ? `- check school email for scope announcements: ${email ? 'yes' : 'no'}\n` : ''}- working folder: ${dir}
+- put raw files in: ${path.join(dir, 'sources')}
+
+## Exams
+${exams.map(e => '- ' + e).join('\n')}
+
+## Notes from the student
+${extra || '(none)'}
+`;
+  fs.writeFileSync(path.join(dir, 'BRIEF.md'), brief);
+  console.log('\n' + green('✓') + ' wrote ' + path.join(dir, 'BRIEF.md'));
+  if (route === 'upload') {
+    console.log(amber('→ ') + `Put your slides, notes, syllabus, practice exams and any "what's on the exam" email in:\n   ${bold(path.join(dir, 'sources'))}`);
+    if (process.platform === 'darwin' && TTY && await yes('Open that folder in Finder now?', 'y')) spawnSync('open', [path.join(dir, 'sources')]);
+  }
+
+  // ---------- hand off to the agent ----------
+  let agent = args.includes('--agent') ? args[args.indexOf('--agent') + 1] : null;
+  if (!agent) agent = env.agents.length === 1 ? env.agents[0] : (await ask('Use which agent? claude / codex', 'claude')).toLowerCase();
+  const prompt = `Read ${SKILL} and follow it exactly (load the references it names as you reach each phase; tools are in ${path.join(ROOT, 'skill', 'tools')}, the page template is in ${path.join(ROOT, 'skill', 'template')}). Then read BRIEF.md in this folder and build my exam cram page. Start with Phase 0: only ask me what BRIEF.md doesn't already answer.`;
+  if (!has(agent)) { console.log('\n' + amber(agent + ' not found.') + ' Run this in ' + dir + ':\n\n  claude "' + prompt + '"\n'); return; }
+  console.log(`\n${violet('▶')} Starting ${bold(agent)} in ${dir}…` + dim(route === 'playwright' ? '\n  A browser window will open: log in yourself (the agent never sees your password), then tell the agent you\'re in.' : '') + '\n');
+  if (RL) RL.close();
+  if (flag('--dry-run')) { console.log(dim('[dry run] would run: ' + agent + ' "' + prompt.slice(0, 60) + '…"')); return; }
+  const child = spawn(agent, [prompt], { cwd: dir, stdio: 'inherit' });
+  child.on('exit', code => process.exit(code ?? 0));
+}
+main().catch(e => { restore(); console.error(e); process.exit(1); });

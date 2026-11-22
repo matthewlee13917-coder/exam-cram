@@ -1,0 +1,65 @@
+# Demo bank. Fictional course; questions written for the demo, not from any real exam.
+@ E101-1 | 1 | Unemployment rate | clone | Demo slides Ch 1 | based: Ch 1 slide "Measuring unemployment"
+Q: A town has 40,000 employed people, 2,500 unemployed people and 7,500 adults not in the labour force. What is the unemployment rate?
+- 5.0%
+- 5.9% *
+- 6.25%
+- 20.0%
+E: Labour force = employed + unemployed = 42,500. u = 2,500 / 42,500 = 5.9%. People not in the labour force are left out of both the top and the bottom.
+T: Dividing by the adult population (50,000) gives 5.0%, the most common wrong answer.
+
+@ E101-2 | 1 | Participation rate | clone | Demo slides Ch 1 | based: Ch 1 slide "Measuring unemployment"
+Q: Using the same town (40,000 employed, 2,500 unemployed, 7,500 not in the labour force), what is the participation rate?
+- 80.0%
+- 85.0% *
+- 94.1%
+- 15.0%
+E: Participation rate = labour force / adult population = 42,500 / 50,000 = 85%.
+
+@ E101-3 | 1 | Types of unemployment | clone | Demo slides Ch 1 | based: Ch 1 slide "Three kinds of unemployment"
+Q: A graphic designer quits to look for a job closer to home and is searching for three weeks. Which kind of unemployment is this?
+- Frictional *
+- Structural
+- Cyclical
+- Seasonal
+E: Short spells of searching between jobs are frictional unemployment. Structural is a mismatch of skills or location that lasts; cyclical comes from a recession.
+
+@ E101-4 | 1 | Discouraged workers | clone | Demo slides Ch 1 | based: Ch 1 slide "Who counts as unemployed"
+Q: If many discouraged workers stop looking for work, what happens to the measured unemployment rate, other things equal?
+- It rises
+- It falls *
+- It does not change
+- It rises, then falls
+E: Discouraged workers leave the labour force, so they drop out of both the unemployed count and the labour force. The measured rate falls even though no one found a job.
+
+@ E101-5 | 2 | Real interest rate | clone | Demo slides Ch 2 | based: Ch 2 slide "Real vs nominal"
+Q: A savings account pays 4% a year and inflation is 6%. What is the approximate real interest rate?
+- 10%
+- 2%
+- −2% *
+- −10%
+E: Real rate ≈ nominal rate − inflation = 4% − 6% = −2%. The saver's purchasing power shrinks.
+
+@ E101-6 | 2 | Winners and losers | clone | Demo slides Ch 2 | based: Ch 2 slide "Unexpected inflation redistributes"
+Q: Inflation turns out much higher than lenders and borrowers expected when a fixed-rate loan was signed. Who gains?
+- The lender
+- The borrower *
+- Neither, because the nominal rate adjusts
+- Both, because incomes rise
+E: The borrower repays in dollars that buy less than expected, so the real interest rate paid is lower than planned. The lender loses.
+
+@ E101-7 | 3 | Quantity theory | clone | Demo slides Ch 3 | based: Ch 3 slide "MV = PY"
+Q: If velocity is constant and real output grows 2% a year, what money-growth rate keeps the price level stable?
+- 0%
+- 1%
+- 2% *
+- 4%
+E: In growth rates, %ΔM + %ΔV = %ΔP + %ΔY. With %ΔV = 0 and %ΔY = 2%, %ΔP = 0 needs %ΔM = 2%.
+
+@ E101-8 | 3 | Functions of money | clone | Demo slides Ch 3 | based: Ch 3 slide "What money does"
+Q: Prices in a store are posted in dollars. Which function of money does this show?
+- Medium of exchange
+- Unit of account *
+- Store of value
+- Standard of deferred payment
+E: Posting prices in dollars uses money as the common measuring stick: unit of account. Paying with it is medium of exchange.

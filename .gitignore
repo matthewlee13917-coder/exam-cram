@@ -1,0 +1,7 @@
+exam-prep-*/
+/sources/
+/site/
+/work/
+/BRIEF.md
+.DS_Store
+__pycache__/
